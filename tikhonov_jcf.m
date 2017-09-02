@@ -49,6 +49,8 @@ function [EGM_sol, lambdaCornerIX, EGM, rho, eta] = tikhonov_jcf(A, R, C, ECG, v
 	
 	%% Select corner
 	[lambdaCornerIX, kappa] = maxCurvatureLcurve(log([rho;eta]), log10(vec_lambda), 8);
+	plot(log(eta), log(rho));hold on;plot(log(eta(lambdaCornerIX)), log(rho(lambdaCornerIX)),'ro');hold off;
+	pause(1);
 	
 	%% return solution
 	EGM_sol = EGM{lambdaCornerIX};

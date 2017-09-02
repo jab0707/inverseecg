@@ -88,7 +88,7 @@ function [EGM_sol, lambda_corner, xk] = inverse_messnarz_ADMM(input_data, A, R, 
 		minBound = -85;	% mV
 		
 	% default ADMM params
-		rho = 10;
+		rho_ADMM = 10;
 		min_r = 1e-5;
 		min_s = 1e-5;
 
@@ -97,7 +97,7 @@ function [EGM_sol, lambda_corner, xk] = inverse_messnarz_ADMM(input_data, A, R, 
 			
 	% adapt parameters
 		if exist('ADMM_params')
-			rho = ADMM_params(3);
+			rho_ADMM = ADMM_params(3);
 			min_r = ADMM_params(1);
 			min_s = ADMM_params(2);
 			maxBound = margins(2);
@@ -129,12 +129,12 @@ function [EGM_sol, lambda_corner, xk] = inverse_messnarz_ADMM(input_data, A, R, 
 			end
 			
 			% ADMM solver
-			[xk{lam}, zk, rho, lamk] = inverse_messnarz_ADMM(	A,...			forward matrix
+			[xk{lam}, zk, rho_ADMM, lamk] = solve_messnarz_ADMM(	A,...			forward matrix
 														R,...					regularization matrix
 														input_data,...			input data
 														vector_lambda(lam),...	current lambda
 														initialx,...			initial guess
-														rho,...					rho (ADMM)
+														rho_ADMM,...					rho (ADMM)
 														min_r,...				stopping criteria residual
 														min_s,...				stopping criteria gradient
 														[minBound maxBound],...	potential bounds
@@ -143,8 +143,8 @@ function [EGM_sol, lambda_corner, xk] = inverse_messnarz_ADMM(input_data, A, R, 
 														lamk...					feedback of lamk for warm start
 														);
 			
-			rho(lam) = (norm(input_data - A*xk{lam},2));
-			eta(lam) = (norm(R*xk{lam},2));
+			rho(lam) = (norm(input_data - A*xk{lam},'fro'));
+			eta(lam) = (norm(R*xk{lam},'fro'));
 
 			% initialize next
 			initialx = xk{lam};
@@ -153,7 +153,7 @@ function [EGM_sol, lambda_corner, xk] = inverse_messnarz_ADMM(input_data, A, R, 
 		toc
 		
 	%% Select corner
-		[lambda_corner] = maxCurvatureLcurve(log([rho;eta]), log10(vec_lambda), 8);
+		[lambda_corner] = maxCurvatureLcurve(log([rho;eta]), log10(vector_lambda), 8);
 		
 	%% return solutions
 		EGM_sol = xk{lambda_corner};
@@ -162,10 +162,10 @@ end
 
 
 %% main function
-function [xk,zk,rho,lamk] = inverse_messnarz_ADMM(A,R,ECG,lambda,initialx,rho,min_r,min_s,margin,verbose,zk,lamk)
+function [xk,zk,rho,lamk] = solve_messnarz_ADMM(A,R,ECG,lambda,initialx,rho,min_r,min_s,margin,verbose,zk,lamk)
 
 	% DEFINE
-		[N M] =size(A);
+		[N, M] =size(A);
 		
 		revisit_rho = 1000;
 		
