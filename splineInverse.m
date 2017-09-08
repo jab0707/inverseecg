@@ -8,7 +8,7 @@ function [EGM_sol] = splineInverse(A, ECG, RegMtrx, vec_lambda, underdetermined)
 	InterpolationDensity=100;				% interpolation density
 	ProjectionInterpolationDensity=200;		% final projection density
 	minderivcostreduction=500;				% minimum reconstruct err for deriv
-	minoverallcostreduction= 1e-6;				% minimum reconstr err total
+	minoverallcostreduction= 1e-6;			% minimum reconstr err total
 	
 	
 	%% FIT CURVE
