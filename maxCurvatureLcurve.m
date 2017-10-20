@@ -26,6 +26,7 @@
 %			- kappa	 - <1,L>double - curvature at each sample along the curve.
 %			%%- splnApp - fcn - spline approximation of the curve.
 %			%%- kappaFcn - fcn - function describing the curvature along the curve.
+%			- maxKappa - double - maximum curvature.
 %
 %		AUTHOR:
 %			Jaume Coll-Font <jcollfont@gmail.com>
@@ -33,7 +34,7 @@
 %
 
 
-function [maxCurvatureIX, kappa, splnApp] = maxCurvatureLcurve(Gamma, lambdas, K)
+function [maxCurvatureIX, kappa, splnApp, maxKappa] = maxCurvatureLcurve(Gamma, lambdas, K)
 
 	%% define
 		[d] = size(Gamma,1);
