@@ -39,6 +39,8 @@ function [maxCurvatureIX, kappa, splnApp, maxKappa] = maxCurvatureLcurve(Gamma, 
 	%% define
 		[d] = size(Gamma,1);
 		
+		doplots = false;	% unless desired do not do plots
+		
 		% optimization settings
 		opti_settings = optimset('Display','off','MaxFunEvals',1e10,'Maxiter',1e10,'TolX',1e-6,'TolFun',1e-6,'LargeScale','off');
 	
@@ -78,6 +80,18 @@ function [maxCurvatureIX, kappa, splnApp, maxKappa] = maxCurvatureLcurve(Gamma, 
 		
 	%% generate functions
 		splnApp = @(t) (knotOpt*BsplineMatrix(K,t)');
+		
+	%% plots
+		if doplots
+			spacing = (lambdas(end) - lambdas(1))/numel(lambdas)*5;
+			plotSamp = splnApp(linspace(lambdas(1)+spacing,lambdas(end) +spacing,1000));
+			plot(plotSamp(1,:),plotSamp(2,:),'g-','LineWidth',2);
+			hold on;
+			scatter(Gamma(1,:), Gamma(2,:),30,kappa,'fill');
+			plot( Gamma(1,maxCurvatureIX), Gamma(2,maxCurvatureIX),'ro');
+			hold off;
+			pause;
+		end
 		
 end
 

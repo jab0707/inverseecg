@@ -27,7 +27,7 @@ function [EGM_sol] = splineInverse(A, ECG, RegMtrx, vec_lambda, underdetermined)
 						
 	%% CALCULATE INVERSE
 		fprintf('Computing Inverse...\n');
-		[Xcurveparams] = tikhonov_jcf(A, RegMtrx, [], CurveParams, vec_lambda, underdetermined);
+		[Xcurveparams] = tikhonov_jcf(A, RegMtrx, [], CurveParams, vec_lambda, underdetermined, true);
 	
 	%% RECONSTRUCT TIME SERIES
 		fprintf('Reconstructing time signal...\n');
