@@ -19,7 +19,7 @@ function [EGM_sol, lambdaCornerIX, EGM, rho, eta] = tikhonov_jcf(A, R, C, ECG, v
 	[N,M] = size(A);
 	T = size(ECG,2);
 	
-	doplots = false;	% unless desired do not do plots
+	doplots = true;	% unless desired do not do plots
 	
 	if numel(C) == 0
 		C = eye(N);
@@ -64,7 +64,7 @@ function [EGM_sol, lambdaCornerIX, EGM, rho, eta] = tikhonov_jcf(A, R, C, ECG, v
 		% compute L-curve and select corner
 		rho = sum(rho,2)';
 		eta = sum(eta,2)';
-		[lambdaCornerIX, kappa,splnApp] = maxCurvatureLcurve(log([rho;eta]), log10(vec_lambda), numel(vec_lambda));
+		[lambdaCornerIX, kappa,splnApp] = maxCurvatureLcurve(log([rho;eta]), log10(vec_lambda), 10);
 		
 		%% return solution
 		EGM_sol = EGM{lambdaCornerIX};
@@ -74,7 +74,7 @@ function [EGM_sol, lambdaCornerIX, EGM, rho, eta] = tikhonov_jcf(A, R, C, ECG, v
 		for tt = 1:T
 			
 			% compute L-curve and select corner
-			[lambdaCornerIX, kappa,splnApp] = maxCurvatureLcurve(log([rho(:,tt)';eta(:,tt)']), log10(vec_lambda), numel(vec_lambda));
+			[lambdaCornerIX, kappa,splnApp] = maxCurvatureLcurve(log([rho(:,tt)';eta(:,tt)']), log10(vec_lambda), 10);
 
 			%% return solution
 			EGM_sol(:,tt) = EGM{lambdaCornerIX}(:,tt);
