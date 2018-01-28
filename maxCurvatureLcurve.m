@@ -42,17 +42,28 @@ function [maxCurvatureIX, kappa, splnApp, maxKappa] = maxCurvatureLcurve(Gamma, 
 		doplots = false;	% unless desired do not do plots
 		
 		% optimization settings
-		opti_settings = optimset('Display','off','MaxFunEvals',1e10,'Maxiter',1e10,'TolX',1e-6,'TolFun',1e-6,'LargeScale','off');
+% 		opti_settings = optimset('Display','iter','MaxFunEvals',1e10,'Maxiter',1e10,'TolX',1e-10,'TolFun',1e-10,'LargeScale','off');
+		
+	if doplots
+			plot(Gamma(1,:), Gamma(2,:),'o-');
+			grid on;
+	end
+		
+	%% clean out loops in the L-curve
+		selIX = true(1,size(Gamma,2));
+% 		[selIX] = selectValidLambdas(Gamma);
+% 		Gamma = Gamma(:,selIX);
+% 		lambdas = lambdas(selIX);
 	
 	%% fit spline approximation
 		% create spline
 			[Bspline, dS, ddS] = BsplineMatrix(K,lambdas);
 		
 		% LSQ fit
-			objFcn = @(knots) norm( Gamma - knots*Bspline' ,'fro');
-			knotInit = zeros(d,K);
-			
-			[knotOpt, fval, extraflag] = fminunc(objFcn,knotInit,opti_settings);
+% 			objFcn = @(knots) norm( Gamma - knots*Bspline' ,'fro');
+% 			knotInit = zeros(d,K);
+% 			[knotOpt, fval, extraflag] = fminunc(objFcn,knotInit,opti_settings);
+			knotOpt = Gamma*Bspline / ( Bspline'*Bspline);
 		
 	%% compute curvature and extract maximum
 		dGamma = knotOpt*dS';
@@ -75,22 +86,26 @@ function [maxCurvatureIX, kappa, splnApp, maxKappa] = maxCurvatureLcurve(Gamma, 
 		end
 	
 		% maximum curvature
-		[maxKappa, maxCurvatureIX] = max(kappa);
+		[maxKappa, ix] = max(kappa);
+		temp = find(selIX);
+		maxCurvatureIX = temp(ix);
 
 		
 	%% generate functions
-		splnApp = @(t) (knotOpt*BsplineMatrix(K,t)');
+% 		splnApp = @(t) (knotOpt*BsplineMatrix(K,t)');
+		splnApp = @(t) computeCurvature(knotOpt, t, K, lambdas);
 		
 	%% plots
 		if doplots
-			spacing = (lambdas(end) - lambdas(1))/numel(lambdas)*5;
-			plotSamp = splnApp(linspace(lambdas(1)+spacing,lambdas(end) +spacing,1000));
-			plot(plotSamp(1,:),plotSamp(2,:),'g-','LineWidth',2);
 			hold on;
+			plotSamp = splnApp(linspace(lambdas(1),lambdas(end),1000));
+			plot(plotSamp(1,:),plotSamp(2,:),'g-','LineWidth',2);
 			scatter(Gamma(1,:), Gamma(2,:),30,kappa,'fill');
-			plot( Gamma(1,maxCurvatureIX), Gamma(2,maxCurvatureIX),'ro');
+			plot( Gamma(1,ix), Gamma(2,ix),'ro','LineWidth',2);
+			plot(knotOpt(1,:),knotOpt(2,:),'kx','LineWidth',2);
 			hold off;
-			pause;
+			grid on;
+			pause(0.2);
 		end
 		
 end
@@ -108,7 +123,10 @@ function [S, dS, ddS] = BsplineMatrix(K,timeSamples)
 		temp = zeros(1,K);
 		temp(kk)=1;
 		
-		ss=spline(linspace(timeSamples(1),timeSamples(end),K),temp);
+		startKnot = timeSamples(1) - 0*(timeSamples(end) - timeSamples(1))/K;
+		endKnot = timeSamples(end) + 0*(timeSamples(end) - timeSamples(1))/K;
+		
+		ss=spline(linspace(startKnot,endKnot,K),temp);
 
 		% create B-spline matrix
 		tempcol=ppval(ss,timeSamples);
@@ -136,5 +154,105 @@ function [S, dS, ddS] = BsplineMatrix(K,timeSamples)
 		tempcol=ppval(ddss,timeSamples);
 		ddS(:,kk)=tempcol(:);
 		
+	end
+end
+
+function [kappa] = computeCurvature(knotOpt, t, K,lambdas)
+
+		[~, dS, ddS] = BsplineMatrix(K,[lambdas(1), t, lambdas(end)]);
+		
+		dGamma = knotOpt*dS';
+		ddGamma = knotOpt*ddS';
+		
+		kappa = ( dGamma(1,:).*ddGamma(2,:) - dGamma(2,:).*ddGamma(1,:) ) ./ ( sum(dGamma.^2,1) ).^(3/2);
+
+		kappa = kappa(2:end-1);	
+
+		
+end
+
+%% create spline
+function [ssINT, dssINT, ddssINT] = splineInterp(K,Gamma,timeSamples)
+	
+	[D] = size(Gamma,1);
+	T = numel(timeSamples);
+	
+	% create B-spline functions
+	startKnot = timeSamples(1) - 0*(timeSamples(end) - timeSamples(1))/K;
+	endKnot = timeSamples(end) + 0*(timeSamples(end) - timeSamples(1))/K;
+
+	ssINT = zeros(D,T);
+	dssINT = zeros(D,T);
+	ddssINT = zeros(D,T);
+	for dd = 1:D
+		ss = spline(timeSamples, Gamma(dd,:));
+		ssINT(dd,:) =ppval(ss,timeSamples);
+		
+		% first derivative function
+		[breaks,coefs,l,k,d] = unmkpp(ss);
+		dcoefs = zeros(l,k-1);
+		for ll = 1:l
+			dcoefs(ll,:) = polyder(coefs(ll,:));
+		end
+		dss = mkpp( breaks , dcoefs);
+		dssINT(dd,:) =ppval(dss,timeSamples);
+
+		% second derivative function
+		[breaks,coefs,l,k,d] = unmkpp(dss);
+		dcoefs = zeros(l,k-1);
+		for ll = 1:l
+			dcoefs(ll,:) = polyder(coefs(ll,:));
+		end
+		ddss = mkpp( breaks , dcoefs);
+
+		ddssINT(dd,:) =ppval(ddss,timeSamples);
+
+	end
+
+end
+
+
+%% fix the Lcurve from values that are too high or too low
+function [selIX] = selectValidLambdas(Gamma)
+
+	dGamma = (diff(Gamma,1,2));
+	
+	Nlam = size(Gamma,2);
+	selIX = true(1,Nlam);
+	
+	[val, ix] = min(dGamma(1,:));
+	range = max(Gamma(1,:)) - min(Gamma(1,:));
+	
+	if abs(val) > range/4
+		selIX((ix+1):end) = false;
+	else
+		ix = Nlam;
+	end
+		
+	for ii = (ix):-1:2
+		
+		[validIx] = checkNextLambda( Gamma(1,ii:-1:1), selIX(ii:-1:1));
+		selIX(ii:-1:1) = validIx;
+		
+	end
+	
+end
+
+function [validIx] = checkNextLambda( gamma, validIx)
+
+	nextIx = find(validIx(2:end));
+	
+	if numel(nextIx)
+		
+		differ = gamma(nextIx(1)+1) - gamma(1);
+	
+		if differ < 0
+			validIx((nextIx(1)+1):end) = false;
+			if nextIx(1)+1 < numel(validIx)
+				[validIx] = checkNextLambda( gamma, validIx);
+			end
+		else
+			validIx(nextIx(1)+1) = true;
+		end
 	end
 end

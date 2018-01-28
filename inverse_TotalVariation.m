@@ -26,28 +26,61 @@
 
 function [EGM] = inverse_TotalVariation( A, R, ECG, vec_lambda)
 
+	%% define
+	[T] = size(ECG,2);
+	[N,M] = size(A);
+	[P] = size(R,1);
+	
+	vECG = reshape(ECG,[T*N,1]);
+	
+	%% for all lambdas
+	x_init = zeros(M,T);
 	l2norm = zeros(size(vec_lambda));
 	l1norm = zeros(size(vec_lambda));
-	fprintf( 1, '   gamma       norm(x,1)    norm(A*x-b)\n' );
-	fprintf( 1, '---------------------------------------\n' );
+	EGM_lam = cell(1,numel(vec_lambda));
 	
-	for k = 1:length(vec_lambda)
+	for k = length(vec_lambda):-1:1
 		
-		fprintf( 1, '%8.4e', vec_lambda(k) );
+% 		kA = kron(speye(T),A);
+% 		kR = kron(speye(T),R);
+% 		cvx_begin 
+% 			variable x_opt(M*T);
+% 			minimize( norm( kA*x_opt - vECG ,2) + vec_lambda(k)*norm( kR*x_opt ,1) );
+% 		cvx_end
 		
-		cvx_begin
-			variable x(n);
-			minimize( norm(A*x-b)+vec_lambda(k)*norm(x,1) );
+		cvx_begin 
+			variable x_opt(M,T);
+			minimize( norm( A*x_opt - ECG ,'fro') + vec_lambda(k)*sum(sum( abs(R*x_opt) )) );
 		cvx_end
-		l1norm(k) = norm(x,1);
-		l2norm(k) = norm(A*x-b);
-		fprintf( 1, '   %8.4e   %8.4e\n', l1norm(k), l2norm(k) );
+		
+% 		obj_fun  = @(x) TotalVariationObjective( x, A, ECG, sumI, R, M, P,T, vec_lambda(k));
+% 		
+% 		x_opt = fminunc(obj_fun, x_init, options);
+		
+		EGM_lam{k} = reshape(x_opt,[M,T]);
+% 		x_init = x_opt;
+		
+		l1norm(k) = sum(sum(  abs(R*EGM_lam{k}) ));
+		l2norm(k) = norm( A*EGM_lam{k} - ECG ,'fro' );
+		
+		
+% 		if (length(vec_lambda) - k) > 3
+% 			[~, kappa] = maxCurvatureLcurve(log([l1norm(k:end);l2norm(k:end)]), log10(vec_lambda(k:end)), min(numel(vec_lambda(k:end)), 10) );
+% 		end
+		
 	end
-	plot( l1norm, l2norm );
-	xlabel( 'norm(x,1)' );
-	ylabel( 'norm(A*x-b)' );
-	grid on
 	
+	[lambdaCornerIX, kappa] = maxCurvatureLcurve(log([l1norm;l2norm]), log10(vec_lambda)/2,  max( round(numel(vec_lambda)/10) ,3) );
 	
-	EGM = x;
+	EGM = EGM_lam{lambdaCornerIX};
+	
 end
+
+% 
+% function [cost] = TotalVariationObjective( x, A, ECG, sumI, R, M,P,T, lambda)
+% 
+% 	cost = norm( A*x - ECG ,'fro') + lambda * norm( reshape(R*x,[P*T,1]) ,1);
+% 	
+% % 	grad =  A'*A*x - 2*A'*ECG   +   lambda * sumI * ( sign(R*x).*repmat(R*ones(M,1),[1,T]) );
+% 	
+% end

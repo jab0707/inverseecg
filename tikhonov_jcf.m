@@ -70,27 +70,30 @@ function [EGM_sol, lambdaCornerIX, EGM, rho, eta] = tikhonov_jcf(A, R, C, ECG, v
 		EGM_sol = EGM{lambdaCornerIX};
 		
 	else
+		lambdaCornerIX = zeros(1,T);
+		kappa = cell(1,T);
 		% for every time instance
 		for tt = 1:T
 			
 			% compute L-curve and select corner
-			[lambdaCornerIX, kappa,splnApp] = maxCurvatureLcurve(log([rho(:,tt)';eta(:,tt)']), log10(vec_lambda), 10);
+			[lambdaCornerIX(tt), kappa{tt}, splnApp{tt}] = maxCurvatureLcurve(log([rho(:,tt)';eta(:,tt)']), log10(vec_lambda), 10);
 
 			%% return solution
-			EGM_sol(:,tt) = EGM{lambdaCornerIX}(:,tt);
+			EGM_sol(:,tt) = EGM{lambdaCornerIX(tt)}(:,tt);
 			
 		end
 		
 	end
 	
-	if doplots
+	if doplots && frobenius
 		spacing = (vec_lambda(end) - vec_lambda(1))/numel(vec_lambda)*5;
-		plotSamp = splnApp(linspace(vec_lambda(1)+spacing,vec_lambda(end) +spacing,1000));
-		plot(plotSamp(1,:),plotSamp(2,:),'g-','LineWidth',2);
+% 		plotSamp = splnApp(linspace(vec_lambda(1)+spacing,vec_lambda(end) +spacing,1000));
+% 		plot(plotSamp(1,:),plotSamp(2,:),'g-','LineWidth',2);
 		hold on;
 		scatter(log(rho), log(eta),30,kappa,'fill');
 		plot(log(rho(lambdaCornerIX)), log(eta(lambdaCornerIX)),'ro');
 		hold off;
+		pause(0.1);
 	end
 	
 	
