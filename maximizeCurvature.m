@@ -5,7 +5,7 @@ function [lambda_IX] = maximizeCurvature(splnApprx, lambdaInit, rho, logLambdas)
 	lb = repmat(min(logLambdas),[K,1]);
 	ub = repmat(max(logLambdas),[K,1]);
 	
-	[lambdaInit] = admm_optimization( lambdaInit, rho, splnApprx, lb, ub)
+	[lambdaInit] = admm_optimization( lambdaInit, rho, splnApprx, lb, ub);
 	
 	objFcn = @(alpha) jointObjective( alpha, rho, splnApprx);
 	
